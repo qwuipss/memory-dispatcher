@@ -40,7 +40,7 @@ public class MemoryDispatcher
     public VirtualAddress Allocate(Process process)
     {
         lock (_memoryPages)
-        {
+        {//check
             Logger.Log($"Allocating MemoryPage for Process: [{process.Id}]", Logger.AllocatingColor);
             
             var memoryPage = _allocationAlgorithm.TryChooseMemoryPage(_memoryPages);
