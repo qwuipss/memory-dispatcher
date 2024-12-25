@@ -2,7 +2,7 @@ using MemoryDispatcher.Memory;
 
 namespace MemoryDispatcher.Algorithms.Allocation;
 
-public class FirstFreePageAllocationAlgorithm : IAllocationAlgorithm
+public class FfmpAllocationAlgorithm : IAllocationAlgorithm
 {
     private readonly Logger _logger = Logger.ForContext<IAllocationAlgorithm>();
 

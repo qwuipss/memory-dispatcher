@@ -5,7 +5,9 @@ namespace MemoryDispatcher;
 
 public class Os
 {
+#pragma warning disable CA2211
     public static int SimulationSpeedScale;
+#pragma warning restore CA2211
 
     private static readonly object Lock = new();
 

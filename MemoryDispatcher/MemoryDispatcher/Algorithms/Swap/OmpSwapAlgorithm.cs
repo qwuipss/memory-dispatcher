@@ -2,7 +2,7 @@ using MemoryDispatcher.Memory;
 
 namespace MemoryDispatcher.Algorithms.Swap;
 
-public class LfuSwapAlgorithm : ISwapAlgorithm // LeastFrequentlyUsed
+public class OmpSwapAlgorithm : ISwapAlgorithm
 {
     private readonly Logger _logger = Logger.ForContext<ISwapAlgorithm>();
 

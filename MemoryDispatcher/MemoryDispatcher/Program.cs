@@ -11,21 +11,21 @@ internal class Program
     private static void Main()
     {
         const string swapPath = "/home/ivan/projects/cs/memory-dispatcher/swap/";
-        var swapAlgorithm = new LfuSwapAlgorithm();
+        ISwapAlgorithm swapAlgorithm = new RandomSwapAlgorithm();
         var swap = new Swap(swapAlgorithm, swapPath);
 
         var memoryMap = new MemoryMap();
 
         const int pageSize = 128;
         const int pagesCount = 64;
-        var allocationAlgorithm = new FirstFreePageAllocationAlgorithm();
+        IAllocationAlgorithm allocationAlgorithm = new RmpAllocationAlgorithm();
         var memoryDispatcher = new Memory.MemoryDispatcher(pageSize, pagesCount, allocationAlgorithm, swap, memoryMap);
 
         Process.KillChance = 5;
         
-        const int processesCount = 100;
+        const int processesCount = 20;
         Os.Initialize(memoryDispatcher, processesCount);
-        Os.SimulationSpeedScale = 100;
+        Os.SimulationSpeedScale = 5;
         Os.Start();
     }
 }
