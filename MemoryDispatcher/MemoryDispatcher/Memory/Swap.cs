@@ -3,54 +3,136 @@ using MemoryDispatcher.Processes;
 
 namespace MemoryDispatcher.Memory;
 
-public class Swap(ISwapAlgorithm swapAlgorithm, string swapPath)
+public class Swap
 {
-    private readonly ISwapAlgorithm _swapAlgorithm = swapAlgorithm;
+    private readonly Logger _logger;
+    private readonly ISwapAlgorithm _swapAlgorithm;
+    private readonly string _swapPath;
 
-    private readonly string _swapPath = swapPath;
+    public Swap(ISwapAlgorithm swapAlgorithm, string swapPath)
+    {
+        _logger = Logger.ForContext<Swap>();
+        _swapAlgorithm = swapAlgorithm;
+        _swapPath = swapPath;
+
+        _logger.Log($"Swap initialized. [SwapAlgorithm:{_swapAlgorithm.GetType().Name}]", Logger.InitializationColor);
+    }
+
+    public MemoryPage Load(VirtualAddress virtualAddress, Process process, out byte[] buffer)
+    {
+        var swapFilePath = GetMemoryPageSwapFilePath(process, virtualAddress);
+
+        _logger.Log($"Start reading [MemoryPage:{virtualAddress.Pointer}] from [SwapFile:{swapFilePath}]", Logger.DiskWritingReadingColor);
+
+        using var fileStream = File.OpenRead(swapFilePath);
+        using var streamReader = new StreamReader(fileStream);
+
+        var stringBuffer = streamReader.ReadLine();
+        buffer = stringBuffer!.Split().Select(byte.Parse).ToArray();
+
+        _logger.Log($"[MemoryPage:{virtualAddress.Pointer}] was read from [SwapFile:{swapFilePath}]", Logger.DiskWritingReadingColor);
+
+        _logger.Log($"Deleting [SwapFile:{swapFilePath}] of [Process:{process.Id}]", Logger.RemovingColor);
+
+        File.Delete(swapFilePath);
+
+        var memoryPage = new MemoryPage(virtualAddress.Pointer, process.Id);
+
+        return memoryPage;
+    }
 
     public MemoryPage Unload(List<MemoryPage> memoryPages, Func<int, byte[]> bufferLocator)
     {
         var memoryPage = _swapAlgorithm.ChooseMemoryPage(memoryPages);
         memoryPages.Remove(memoryPage);
 
-        var swapPath = GetMemoryPageSwapFilePath(memoryPage);
+        _logger.Log($"[MemoryPage:{memoryPage.VirtualAddress.Pointer}] of [Process:{memoryPage.ProcessId}] removed from MemoryPages]",
+            Logger.RemovingColor);
 
-        using var textWriter = new StreamWriter(File.OpenWrite(swapPath));
+        var swapFilePath = GetMemoryPageSwapFilePath(memoryPage);
 
-        textWriter.WriteLine(memoryPage.ProcessId);
-        textWriter.WriteLine(memoryPage.VirtualAddress.Pointer);
+        _logger.Log($"Start writing [MemoryPage:{memoryPage.VirtualAddress.Pointer}] to [SwapFile:{swapFilePath}]", Logger.DiskWritingReadingColor);
+
+        using var fileStream = OpenSwapFile(memoryPage);
+        using var streamWriter = new StreamWriter(fileStream);
 
         var buffer = bufferLocator(memoryPage.VirtualAddress.Pointer);
-        textWriter.WriteLine(string.Join(' ', buffer));
+        streamWriter.WriteLine(string.Join(' ', buffer));
+
+        _logger.Log($"[MemoryPage:{memoryPage.VirtualAddress.Pointer}] was written to [SwapFile:{swapFilePath}]", Logger.DiskWritingReadingColor);
 
         return memoryPage;
     }
 
     public void FreeAll(Process process)
     {
-        var swapPath = GetProcessSwapDirPath(process);
-        Directory.Delete(swapPath, true);
+        var processSwapDir = GetProcessSwapDirPath(process);
+        if (Directory.Exists(processSwapDir))
+        {
+            _logger.Log($"Deleting [SwapDir:{processSwapDir}] of [Process:{process.Id}]", Logger.RemovingColor);
+            Directory.Delete(processSwapDir, true);
+        }
+        else
+        {
+            _logger.Log($"[SwapDir:{processSwapDir}] of [Process:{process.Id}] not found");
+        }
     }
 
     public void Free(Process process, VirtualAddress virtualAddress)
     {
-        var swapPath = GetMemoryPageSwapFilePath(process, virtualAddress);
-        File.Delete(swapPath);
+        var processSwapFilePath = GetMemoryPageSwapFilePath(process, virtualAddress);
+        _logger.Log($"Deleting [SwapFile:{processSwapFilePath}] of [Process:{process.Id}]", Logger.RemovingColor);
+        File.Delete(processSwapFilePath);
     }
 
     private string GetMemoryPageSwapFilePath(MemoryPage memoryPage)
     {
-        return Path.Combine(_swapPath, $"{memoryPage.ProcessId}/bfr-{memoryPage.VirtualAddress.Pointer}");
+        return Path.Join(_swapPath, $"{memoryPage.ProcessId}/bfr-{memoryPage.VirtualAddress.Pointer}");
     }
 
     private string GetMemoryPageSwapFilePath(Process process, VirtualAddress virtualAddress)
     {
-        return Path.Combine(GetProcessSwapDirPath(process), $"/bfr-{virtualAddress.Pointer}");
+        return Path.Join(GetProcessSwapDirPath(process), $"/bfr-{virtualAddress.Pointer}");
+    }
+
+    private string GetMemoryPageSwapFilePath(int processId, VirtualAddress virtualAddress)
+    {
+        return Path.Join(GetProcessSwapDirPath(processId), $"/bfr-{virtualAddress.Pointer}");
     }
 
     private string GetProcessSwapDirPath(Process process)
     {
-        return Path.Combine(_swapPath, $"/{process.Id}");
+        return GetProcessSwapDirPath(process.Id);
+    }
+
+    private string GetProcessSwapDirPath(int processId)
+    {
+        return Path.Join(_swapPath, $"/{processId}");
+    }
+
+    private FileStream OpenSwapFile(MemoryPage memoryPage)
+    {
+        var processSwapDir = GetProcessSwapDirPath(memoryPage.ProcessId);
+
+        string processSwapFilePath;
+
+        if (!Directory.Exists(processSwapDir))
+        {
+            _logger.Log($"Creating [SwapDir:{processSwapDir}] for [Process:{memoryPage.ProcessId}]", Logger.DiskWritingReadingColor);
+
+            Directory.CreateDirectory(processSwapDir);
+
+            processSwapFilePath = GetMemoryPageSwapFilePath(memoryPage.ProcessId, memoryPage.VirtualAddress);
+
+            return File.Create(processSwapFilePath);
+        }
+
+        processSwapFilePath = GetMemoryPageSwapFilePath(memoryPage.ProcessId, memoryPage.VirtualAddress);
+
+        if (File.Exists(processSwapFilePath)) return File.OpenWrite(processSwapFilePath);
+
+        _logger.Log($"Creating [SwapFile:{processSwapFilePath}] for [Process:{memoryPage.ProcessId}]", Logger.DiskWritingReadingColor);
+
+        return File.Create(processSwapFilePath);
     }
 }

@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-
 namespace MemoryDispatcher.Memory;
 
 public class MemoryMap
@@ -12,8 +10,13 @@ public class MemoryMap
         set => _map[key] = value;
     }
 
-    public void Remove(int key)
+    public bool TryGetBuffer(int virtualAddressPointer, out byte[]? buffer)
     {
-        _map.Remove(key, out _);
-    }   
+        return _map.TryGetValue(virtualAddressPointer, out buffer);
+    }
+
+    public void Remove(int virtualAddressPointer)
+    {
+        _map.Remove(virtualAddressPointer, out _);
+    }
 }
