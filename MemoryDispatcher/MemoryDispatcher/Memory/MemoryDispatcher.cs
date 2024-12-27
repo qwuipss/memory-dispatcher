@@ -5,6 +5,8 @@ namespace MemoryDispatcher.Memory;
 
 public class MemoryDispatcher
 {
+    public static int Invokes;
+
     private readonly IAllocationAlgorithm _allocationAlgorithm;
     private readonly Logger _logger;
     private readonly MemoryMap _memoryMap;
@@ -39,6 +41,8 @@ public class MemoryDispatcher
     {
         lock (_memoryPages)
         {
+            Invokes++;
+
             if (_memoryMap.TryGetBuffer(address.Pointer, out var buffer))
             {
                 _logger.Log($"[MemoryPage:{address.Pointer}] found in MemoryMap. Start writing data", Logger.MemoryWritingReadingColor);
@@ -92,7 +96,8 @@ public class MemoryDispatcher
     {
         lock (_memoryPages)
         {
-            //check 
+            Invokes++;
+
             _logger.Log($"Allocating MemoryPage for [Process:{process.Id}]", Logger.AllocatingColor);
 
             var memoryPage = _allocationAlgorithm.TryChooseMemoryPage(_memoryPages);
@@ -131,6 +136,8 @@ public class MemoryDispatcher
     {
         lock (_memoryPages)
         {
+            Invokes++;
+
             foreach (var memoryPage in _memoryPages.Where(memoryPage => memoryPage.ProcessId == process.Id)) FreeMemoryPage(memoryPage);
 
             _swap.FreeAll(process);
@@ -139,9 +146,10 @@ public class MemoryDispatcher
 
     public void Free(Process process, VirtualAddress virtualAddress)
     {
-        // check
         lock (_memoryPages)
         {
+            Invokes++;
+
             var memoryPage = _memoryPages.FirstOrDefault(memoryPage => memoryPage.VirtualAddress.Pointer == virtualAddress.Pointer);
             if (memoryPage is null)
             {

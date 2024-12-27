@@ -31,6 +31,9 @@ public class Os
         foreach (var process in Processes) process.Run();
 
         Console.ReadLine();
+        Console.WriteLine(
+            $"[SwapInvokes:{Swap.Invokes}]. [MemoryDispatcherInvokes:{Memory.MemoryDispatcher.Invokes}]. [Ratio:{Memory.MemoryDispatcher.Invokes / Swap.Invokes}]");
+        Console.WriteLine();
     }
 
     public static (VirtualAddress Address, int Size) RequireMemory(Process process)
@@ -41,6 +44,11 @@ public class Os
     public static void RequireWrite(Process process, VirtualAddress address, int addressOffset, byte[] data, int dataOffset, int dataWriteLength)
     {
         _memoryDispatcher.Write(process, address, addressOffset, data, dataOffset, dataWriteLength);
+    }
+
+    public static void RequireFree(Process process, VirtualAddress address)
+    {
+        _memoryDispatcher.Free(process, address);
     }
 
     public static void Kill(Process process)

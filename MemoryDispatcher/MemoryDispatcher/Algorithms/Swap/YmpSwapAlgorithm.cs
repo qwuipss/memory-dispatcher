@@ -8,7 +8,7 @@ public class YmpSwapAlgorithm : ISwapAlgorithm // LeastFrequentlyUsed
 
     public MemoryPage ChooseMemoryPage(List<MemoryPage> memoryPages)
     {
-        var memoryPagesMaxId = memoryPages.Min(memoryPage => memoryPage.VirtualAddress.Pointer);
+        var memoryPagesMaxId = memoryPages.Max(memoryPage => memoryPage.VirtualAddress.Pointer);
         var memoryPage = memoryPages.First(memoryPage => memoryPage.VirtualAddress.Pointer == memoryPagesMaxId);
         _logger.Log($"Chosen [MemoryPage:{memoryPage.VirtualAddress.Pointer}]");
         return memoryPage;

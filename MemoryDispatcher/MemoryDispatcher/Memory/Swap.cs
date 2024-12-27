@@ -5,6 +5,8 @@ namespace MemoryDispatcher.Memory;
 
 public class Swap
 {
+    public static int Invokes;
+
     private readonly Logger _logger;
     private readonly ISwapAlgorithm _swapAlgorithm;
     private readonly string _swapPath;
@@ -20,6 +22,8 @@ public class Swap
 
     public MemoryPage Load(VirtualAddress virtualAddress, Process process, out byte[] buffer)
     {
+        Invokes++;
+
         var swapFilePath = GetMemoryPageSwapFilePath(process, virtualAddress);
 
         _logger.Log($"Start reading [MemoryPage:{virtualAddress.Pointer}] from [SwapFile:{swapFilePath}]", Logger.DiskWritingReadingColor);
@@ -43,6 +47,8 @@ public class Swap
 
     public MemoryPage Unload(List<MemoryPage> memoryPages, Func<int, byte[]> bufferLocator)
     {
+        Invokes++;
+
         var memoryPage = _swapAlgorithm.ChooseMemoryPage(memoryPages);
         memoryPages.Remove(memoryPage);
 
@@ -66,6 +72,8 @@ public class Swap
 
     public void FreeAll(Process process)
     {
+        Invokes++;
+
         var processSwapDir = GetProcessSwapDirPath(process);
         if (Directory.Exists(processSwapDir))
         {
@@ -80,6 +88,8 @@ public class Swap
 
     public void Free(Process process, VirtualAddress virtualAddress)
     {
+        Invokes++;
+
         var processSwapFilePath = GetMemoryPageSwapFilePath(process, virtualAddress);
         _logger.Log($"Deleting [SwapFile:{processSwapFilePath}] of [Process:{process.Id}]", Logger.RemovingColor);
         File.Delete(processSwapFilePath);

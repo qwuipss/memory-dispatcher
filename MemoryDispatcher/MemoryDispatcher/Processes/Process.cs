@@ -18,17 +18,15 @@ public class Process(int id)
     private readonly Logger _logger = Logger.ForContext<Process>();
     private readonly Random _random = new();
 
-    private delegate IntPtr ThreadStartDelegate(IntPtr arg);
-    
     public int Id { get; } = id;
-    
+
     public void Run()
     {
 #pragma warning disable CA1806
         pthread_create(out _, IntPtr.Zero, Run, IntPtr.Zero);
 #pragma warning restore CA1806
     }
-    
+
     [DllImport("libc.so.6")]
     private static extern int pthread_create(out IntPtr thread, IntPtr attr, ThreadStartDelegate startRoutine, IntPtr arg);
 
@@ -100,8 +98,17 @@ public class Process(int id)
                 _addressesInfo.Add(addressInfo);
             }
 
+            if (_addressesInfo.Count > 1 && _random.Next(0, 100) < 20)
+            {
+                var addressForFree = _addressesInfo[_random.Next(_addressesInfo.Count)];
+                _logger.Log($"Free [Address:{addressForFree.Address.Pointer}] of [Process:{Id}]", Logger.OsCallColor);
+                Os.RequireFree(this, addressForFree.Address);
+                _addressesInfo.Remove(addressForFree);
+            }
+
             if (_random.Next(0, 100) < KillChance)
             {
+                _logger.Log($"Killing [Process:{Id}]", Logger.OsCallColor);
                 Os.Kill(this);
                 return IntPtr.Zero;
             }
@@ -109,6 +116,8 @@ public class Process(int id)
             Thread.Sleep(1000 / Os.SimulationSpeedScale);
         }
     }
+
+    private delegate IntPtr ThreadStartDelegate(IntPtr arg);
 
     private class AddressInfo(VirtualAddress address, int size, int offset)
     {

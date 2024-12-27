@@ -9,8 +9,8 @@ public class RmpAllocationAlgorithm : IAllocationAlgorithm
     public MemoryPage? TryChooseMemoryPage(List<MemoryPage> memoryPages)
     {
         var attempts = 5;
-        MemoryPage? memoryPage; 
-        
+        MemoryPage? memoryPage;
+
         while (attempts > 0)
         {
             memoryPage = memoryPages[Random.Shared.Next(memoryPages.Count)];
@@ -19,6 +19,7 @@ public class RmpAllocationAlgorithm : IAllocationAlgorithm
                 _logger.Log($"Chosen [MemoryPage:{memoryPage.VirtualAddress.Pointer}]");
                 return memoryPage;
             }
+
             attempts--;
         }
 
